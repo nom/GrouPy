@@ -52,7 +52,7 @@ def gconv2d_util(h_input, h_output, in_channels, out_channels, ksize):
       5) the shape of the filter tensor to be allocated and passed to gconv2d
 
     :param h_input: one of ('Z2', 'C4', 'D4'). Use 'Z2' for the first layer. Use 'C4' or 'D4' for later layers.
-    :param h_output: one of ('C4', 'D4'). What kind of transformations to use (rotations or roto-reflections).
+    :param h_output: one of ('Z2', 'C4', 'D4'). What kind of transformations to use (rotations or roto-reflections).
       The choice of h_output of one layer should equal h_input of the next layer.
     :param in_channels: the number of input channels. Note: this refers to the number of (3D) channels on the group.
     The number of 2D channels will be 1, 4, or 8 times larger, depending the value of h_input.
@@ -78,10 +78,22 @@ def gconv2d_util(h_input, h_output, in_channels, out_channels, ksize):
         gconv_indices = flatten_indices(make_d4_p4m_indices(ksize=ksize))
         nti = 8
         nto = 8
+    elif h_input == 'D4' and h_output == 'Z2':
+        gconv_indices = flatten_indices(make_d4_z2_indices(ksize=ksize))
+        nti = 8
+        nto = 1
+    elif h_input == 'C4' and h_output == 'Z2':
+        gconv_indices = flatten_indices(make_c4_z2_indices(ksize=ksize))
+        nti = 4
+        nto = 1
     else:
         raise ValueError('Unknown (h_input, h_output) pair:' + str((h_input, h_output)))
 
-    w_shape = (ksize, ksize, in_channels * nti, out_channels)
+    if h_output == 'Z2':
+        w_shape = (ksize, ksize, in_channels, out_channels)
+    else:
+        w_shape = (ksize, ksize, in_channels * nti, out_channels)
+
     gconv_shape_info = (out_channels, nto, in_channels, nti, ksize)
     return gconv_indices, gconv_shape_info, w_shape
 
